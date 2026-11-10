@@ -1,0 +1,5 @@
+ضع ملف targets.mind هنا بعد توليده من compiler.html أو من أداة MindAR الرسمية.
+
+استخدم صور scene-1-original.jpg حتى scene-4-original.jpg بنفس الترتيب.
+
+مهم: هذا الملف نص إرشادي فقط، وليس ملف التعرف. لم يتم إنشاء targets.mind في الحزمة.

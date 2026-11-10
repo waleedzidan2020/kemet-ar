@@ -2,6 +2,7 @@
 const $=s=>document.querySelector(s);
 const mode=new URLSearchParams(location.search).get('mode')==='demo'?'demo':'custom';
 let language=localStorage.getItem('kemet-lang')==='en'?'en':'ar';
+let locked=false,lockedIndex=-1;
 let sceneEl=null,currentIndex=-1,found=false,showOverlay=true,desiredOpacity=1,animationFrame=0,mindUrl=null;
 const DEMO_MIND='https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/card.mind';
 const descriptions={ar:[
@@ -20,22 +21,62 @@ descriptions.ar = [['تجربة صورتك الملونة','تصور ملون ل
 descriptions.en = [['Your relief — color test','A color visualization of your original photograph. Colors are illustrative.']];
 Object.assign(strings.ar,{customHelpText:'ملف التعرف جاهز. اعرض الصورة الأصلية على شاشة ثانية أو اطبعها، ووجّه كاميرا الموبايل إليها.',customModeLink:'تجربة صورتك',chooseMindLabel:'ملف التعرف مرفق — اختيار ملف بديل اختياري',compilerLink:'تجهيز هدف آخر ↗'});
 Object.assign(strings.en,{customHelpText:'Tracking is ready. Display the original photo on another screen or print it, then aim your phone camera at it.',customModeLink:'Your photo test',chooseMindLabel:'Tracking file included — optional replacement',compilerLink:'Build another target ↗'});
+Object.assign(strings.ar,{lockLabel:'تثبيت المنظر',unlockLabel:'إلغاء التثبيت',trackingLocked:'المنظر مثبت — اضغط إلغاء التثبيت للعودة للكاميرا',lockHint:'وجّه الكاميرا للنقش وأظهر الألوان أولًا',errCapture:'تعذر تثبيت المنظر. أبقِ النقش ظاهرًا وحاول مجددًا.'});
+Object.assign(strings.en,{lockLabel:'Lock view',unlockLabel:'Unlock view',trackingLocked:'View locked — unlock to return to the live camera',lockHint:'Find a target and show its colors first',errCapture:'Could not lock the view. Keep the target visible and try again.'});
 const tr=k=>strings[language][k];
-function renderLang(){document.documentElement.lang=language;document.documentElement.dir=language==='ar'?'rtl':'ltr';localStorage.setItem('kemet-lang',language);$('#langButton').textContent=language==='ar'?'EN':'عربي';['welcomeTitle','welcomeDesc','demoHelpTitle','demoHelpText','demoTargetLink','chooseMindLabel','customHelpText','compilerLink','startLabel','backHome','demoModeLink','customModeLink','welcomeDisclaimer','infoLabel','opacityLabel','revealLabel','stopLabel','infoHeading','speakLabel'].forEach(id=>$('#'+id).textContent=tr(id));$('#modeBadge').textContent=mode==='demo'?'MINDAR DEMO':'YOUR PHOTO TEST';$('#demoExplainer').hidden=mode==='custom';$('#customExplainer').hidden=mode!=='custom';$('#sceneCaption').textContent=tr('sceneCaption');$('#originalLabel').textContent=showOverlay?tr('originalLabel'):tr('restoreLabel');$('#trackingText').textContent=found?tr('trackingFound'):sceneEl?tr('trackingScan'):tr('trackingIdle');updateInfo()}
-function updateInfo(){const d=mode==='demo'?[tr('demoScene'),tr('infoBody')]:descriptions[language][Math.max(0,currentIndex)];$('#sceneName').textContent=d[0];$('#infoBody').textContent=d[1]}
-function status(key,success=false){$('#trackingText').textContent=tr(key);$('#trackingState').classList.toggle('success',success)}
+function syncLockControls(){
+ const btn=$('#lockView');btn.disabled=!locked&&(!found||!showOverlay||!sceneEl);
+ btn.setAttribute('aria-pressed',String(locked));btn.classList.toggle('active',locked);
+ $('#lockLabel').textContent=tr(locked?'unlockLabel':'lockLabel');$('#lockIcon').textContent=locked?'🔓':'🔒';
+ btn.title=btn.disabled?tr('lockHint'):tr(locked?'unlockLabel':'lockLabel');
+ $('#frozenView').setAttribute('aria-label',tr('trackingLocked'));
+ ['showOriginal','revealAgain','opacitySlider'].forEach(id=>$('#'+id).disabled=locked);
+}
+function unlockView(){
+ locked=false;lockedIndex=-1;const canvas=$('#frozenView');canvas.hidden=true;canvas.width=canvas.height=0;
+ syncLockControls();$('#scanGuide').classList.toggle('active',!!sceneEl&&!found);
+ status(found?'trackingFound':sceneEl?'trackingScan':'trackingIdle',found);updateInfo();
+}
+function toggleLock(){
+ if(locked){unlockView();return;}
+ if(!sceneEl||!found||!showOverlay)return;
+ const canvas=$('#frozenView');
+ try{
+  const video=sceneEl.systems['mindar-image-system']?.video||$('#arMount video');
+  const renderer=sceneEl.renderer;
+  if(!video||video.readyState<2||!renderer||!sceneEl.camera)throw Error('Camera frame unavailable');
+  const bounds=$('#arMount').getBoundingClientRect();
+  if(!bounds.width||!bounds.height)throw Error('Empty camera viewport');
+  const scale=Math.min(window.devicePixelRatio||1,2);
+  canvas.width=Math.round(bounds.width*scale);canvas.height=Math.round(bounds.height*scale);
+  const ctx=canvas.getContext('2d');if(!ctx)throw Error('Canvas unavailable');
+  ctx.scale(scale,scale);ctx.fillStyle='#051018';ctx.fillRect(0,0,bounds.width,bounds.height);
+  // MindAR sizes and centers its video and WebGL canvas; preserve those crop rectangles.
+  const draw=source=>{const r=source.getBoundingClientRect();ctx.drawImage(source,r.left-bounds.left,r.top-bounds.top,r.width,r.height);};
+  cancelAnimationFrame(animationFrame);applyOpacity();
+  renderer.render(sceneEl.object3D,sceneEl.camera);
+  draw(video);draw(renderer.domElement);
+  lockedIndex=currentIndex;locked=true;canvas.hidden=false;
+  $('#scanGuide').classList.remove('active');syncLockControls();status('trackingLocked',true);updateInfo();
+ }catch(e){console.error(e);canvas.hidden=true;canvas.width=canvas.height=0;error(tr('errCapture'));}
+}
+
+function renderLang(){document.documentElement.lang=language;document.documentElement.dir=language==='ar'?'rtl':'ltr';localStorage.setItem('kemet-lang',language);$('#langButton').textContent=language==='ar'?'EN':'عربي';['welcomeTitle','welcomeDesc','demoHelpTitle','demoHelpText','demoTargetLink','chooseMindLabel','customHelpText','compilerLink','startLabel','backHome','demoModeLink','customModeLink','welcomeDisclaimer','infoLabel','opacityLabel','revealLabel','stopLabel','infoHeading','speakLabel'].forEach(id=>$('#'+id).textContent=tr(id));$('#modeBadge').textContent=mode==='demo'?'MINDAR DEMO':'YOUR PHOTO TEST';$('#demoExplainer').hidden=mode==='custom';$('#customExplainer').hidden=mode!=='custom';$('#sceneCaption').textContent=tr('sceneCaption');$('#originalLabel').textContent=showOverlay?tr('originalLabel'):tr('restoreLabel');$('#trackingText').textContent=found?tr('trackingFound'):sceneEl?tr('trackingScan'):tr('trackingIdle');updateInfo();syncLockControls();if(locked)status('trackingLocked',true)}
+function updateInfo(){const d=mode==='demo'?[tr('demoScene'),tr('infoBody')]:descriptions[language][Math.max(0,locked?lockedIndex:currentIndex)];$('#sceneName').textContent=d[0];$('#infoBody').textContent=d[1]}
+function status(key,success=false){syncLockControls();if(locked){key='trackingLocked';success=true;}$('#trackingText').textContent=tr(key);$('#trackingState').classList.toggle('success',success)}
 let errorTimer=0;function error(message){const box=$('#errorToast');box.textContent=message;box.hidden=false;clearTimeout(errorTimer);errorTimer=setTimeout(()=>box.hidden=true,9000)}
 async function getMindUrl(){if(mode==='demo')return DEMO_MIND;const file=$('#mindFile').files[0];if(file)return URL.createObjectURL(file);try{const res=await fetch('assets/targets.mind',{method:'GET',cache:'no-store'});if(res.ok&&Number(res.headers.get('content-length')||'100')>50)return new URL('assets/targets.mind',location.href).href;}catch(e){}throw new Error(tr('errMind'))}
 function setOpacity(num){desiredOpacity=Number(num)/100;$('#opacityNum').textContent=num+'%';applyOpacity()}
 function applyOpacity(){if(!sceneEl||!found)return;const item=$('#plane-'+currentIndex);if(item)item.setAttribute('material','opacity',showOverlay?desiredOpacity:0)}
-function animateOverlay(){if(!found||!sceneEl)return;cancelAnimationFrame(animationFrame);showOverlay=true;$('#originalLabel').textContent=tr('originalLabel');$('#showOriginal').classList.remove('active');const plane=$('#plane-'+currentIndex);if(!plane)return;const begin=performance.now(),dur=1800;function tick(now){if(!found)return;let ratio=Math.min(1,(now-begin)/dur);ratio=ratio*ratio*(3-2*ratio);plane.setAttribute('material','opacity',ratio*desiredOpacity);if(ratio<1)animationFrame=requestAnimationFrame(tick)}animationFrame=requestAnimationFrame(tick)}
-function startScene(targetSrc){const demo=mode==='demo',meta=demo?[[.552,'demo-overlay.png']]:[[3/4,'test-relief-color.png']];const assets=meta.map((x,i)=>`<img id="texture-${i}" src="assets/${x[1]}" crossorigin="anonymous">`).join('');const targets=meta.map((x,i)=>`<a-entity id="target-${i}" mindar-image-target="targetIndex: ${i}"><a-plane id="plane-${i}" src="#texture-${i}" position="0 0 0.004" width="1" height="${x[0]}" material="shader: flat; transparent: true; opacity: 0; depthWrite: false; side: double; alphaTest: 0.001"></a-plane></a-entity>`).join('');const safeSrc=targetSrc.replaceAll('"','&quot;');$('#arMount').innerHTML=`<a-scene id="scene" mindar-image="imageTargetSrc: ${safeSrc}; autoStart: false; uiLoading: no; uiScanning: no; uiError: no; filterMinCF: 0.0001; filterBeta: 0.01;" embedded color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false"><a-assets timeout="25000">${assets}</a-assets><a-camera position="0 0 0" look-controls="enabled: false"></a-camera>${targets}</a-scene>`;sceneEl=$('#scene');meta.forEach((_,i)=>{const target=$('#target-'+i);target.addEventListener('targetFound',()=>{currentIndex=i;found=true;status('trackingFound',true);$('#scanGuide').classList.remove('active');$('#infoSheet').hidden=true;updateInfo();animateOverlay()});target.addEventListener('targetLost',()=>{if(currentIndex!==i)return;cancelAnimationFrame(animationFrame);found=false;currentIndex=-1;status('trackingLost');$('#scanGuide').classList.add('active');updateInfo()})});sceneEl.addEventListener('arError',e=>{console.error(e);error(tr('errCamera'))});return sceneEl}
+function animateOverlay(){if(!found||!sceneEl)return;cancelAnimationFrame(animationFrame);showOverlay=true;syncLockControls();$('#originalLabel').textContent=tr('originalLabel');$('#showOriginal').classList.remove('active');const plane=$('#plane-'+currentIndex);if(!plane)return;const begin=performance.now(),dur=1800;function tick(now){if(!found)return;let ratio=Math.min(1,(now-begin)/dur);ratio=ratio*ratio*(3-2*ratio);plane.setAttribute('material','opacity',ratio*desiredOpacity);if(ratio<1)animationFrame=requestAnimationFrame(tick)}animationFrame=requestAnimationFrame(tick)}
+function startScene(targetSrc){const demo=mode==='demo',meta=demo?[[.552,'demo-overlay.png']]:[[3/4,'test-relief-color.png']];const assets=meta.map((x,i)=>`<img id="texture-${i}" src="assets/${x[1]}" crossorigin="anonymous">`).join('');const targets=meta.map((x,i)=>`<a-entity id="target-${i}" mindar-image-target="targetIndex: ${i}"><a-plane id="plane-${i}" src="#texture-${i}" position="0 0 0.004" width="1" height="${x[0]}" material="shader: flat; transparent: true; opacity: 0; depthWrite: false; side: double; alphaTest: 0.001"></a-plane></a-entity>`).join('');const safeSrc=targetSrc.replaceAll('"','&quot;');$('#arMount').innerHTML=`<a-scene id="scene" mindar-image="imageTargetSrc: ${safeSrc}; autoStart: false; uiLoading: no; uiScanning: no; uiError: no; filterMinCF: 0.0001; filterBeta: 0.01;" embedded color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false"><a-assets timeout="25000">${assets}</a-assets><a-camera position="0 0 0" look-controls="enabled: false"></a-camera>${targets}</a-scene>`;sceneEl=$('#scene');meta.forEach((_,i)=>{const target=$('#target-'+i);target.addEventListener('targetFound',()=>{currentIndex=i;found=true;status('trackingFound',true);$('#scanGuide').classList.remove('active');$('#infoSheet').hidden=true;updateInfo();animateOverlay()});target.addEventListener('targetLost',()=>{if(currentIndex!==i)return;cancelAnimationFrame(animationFrame);found=false;currentIndex=-1;status('trackingLost');$('#scanGuide').classList.toggle('active',!locked);updateInfo()})});sceneEl.addEventListener('arError',e=>{console.error(e);error(tr('errCamera'))});return sceneEl}
 function sceneLoaded(scene){if(scene.hasLoaded)return Promise.resolve();return Promise.race([new Promise(res=>scene.addEventListener('loaded',res,{once:true})),new Promise((_,rej)=>setTimeout(()=>rej(Error('Scene load timeout')),30000))])}
 async function start(){const btn=$('#startCamera');btn.disabled=true;status('trackingLoading');try{if(!window.isSecureContext&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1')throw Error(tr('errSecure'));if(!window.AFRAME||!AFRAME.components['mindar-image'])throw Error(tr('errLib'));mindUrl=await getMindUrl();const scene=startScene(mindUrl);await sceneLoaded(scene);if(!scene.systems['mindar-image-system'])throw Error(tr('errLib'));await scene.systems['mindar-image-system'].start();$('#welcome').hidden=true;$('#arControls').hidden=false;$('#scanGuide').classList.add('active');$('.ambient').classList.add('hidden');status('trackingScan');}catch(e){console.error(e);error(e.message||tr('errCamera'));btn.disabled=false;status('trackingIdle');if(sceneEl){try{await sceneEl.systems['mindar-image-system']?.stop()}catch(err){}$('#arMount').innerHTML='';sceneEl=null}}}
-async function stop(){cancelAnimationFrame(animationFrame);if('speechSynthesis' in window)speechSynthesis.cancel();try{await sceneEl?.systems['mindar-image-system']?.stop()}catch(e){console.error(e)}$('#arMount').innerHTML='';sceneEl=null;found=false;currentIndex=-1;$('#welcome').hidden=false;$('#startCamera').disabled=false;$('#arControls').hidden=true;$('#infoSheet').hidden=true;$('#scanGuide').classList.remove('active');$('.ambient').classList.remove('hidden');status('trackingIdle')}
+async function stop(){unlockView();cancelAnimationFrame(animationFrame);if('speechSynthesis' in window)speechSynthesis.cancel();try{await sceneEl?.systems['mindar-image-system']?.stop()}catch(e){console.error(e)}$('#arMount').innerHTML='';sceneEl=null;found=false;currentIndex=-1;$('#welcome').hidden=false;$('#startCamera').disabled=false;$('#arControls').hidden=true;$('#infoSheet').hidden=true;$('#scanGuide').classList.remove('active');$('.ambient').classList.remove('hidden');status('trackingIdle')}
+$('#lockView').addEventListener('click',toggleLock);
 $('#startCamera').addEventListener('click',start);
 $('#stopCamera').addEventListener('click',stop);
-$('#showOriginal').addEventListener('click',()=>{showOverlay=!showOverlay;cancelAnimationFrame(animationFrame);applyOpacity();$('#originalLabel').textContent=showOverlay?tr('originalLabel'):tr('restoreLabel');$('#showOriginal').classList.toggle('active',!showOverlay)});
+$('#showOriginal').addEventListener('click',()=>{showOverlay=!showOverlay;cancelAnimationFrame(animationFrame);applyOpacity();$('#originalLabel').textContent=showOverlay?tr('originalLabel'):tr('restoreLabel');$('#showOriginal').classList.toggle('active',!showOverlay);syncLockControls()});
 $('#revealAgain').addEventListener('click',animateOverlay);
 $('#opacitySlider').addEventListener('input',e=>setOpacity(e.target.value));
 $('#infoToggle').addEventListener('click',()=>{$('#infoSheet').hidden=!$('#infoSheet').hidden;$('#infoToggle').setAttribute('aria-expanded',String(!$('#infoSheet').hidden))});
@@ -44,3 +85,4 @@ $('#langButton').addEventListener('click',()=>{language=language==='ar'?'en':'ar
 $('#speakInfo').addEventListener('click',()=>{if(!('speechSynthesis' in window))return;speechSynthesis.cancel();const utter=new SpeechSynthesisUtterance($('#infoBody').textContent);utter.lang=language==='ar'?'ar-EG':'en-US';utter.rate=.92;speechSynthesis.speak(utter)});
 window.addEventListener('beforeunload',()=>{if('speechSynthesis' in window)speechSynthesis.cancel()});renderLang();
 })();
+

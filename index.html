@@ -1,107 +1,17 @@
-<!doctype html>
-<html lang="ar" dir="rtl">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#081319" />
-  <meta name="description" content="KEMET AR — استكشف النقوش المصرية القديمة بالواقع المعزز مع ترميم رقمي تفاعلي." />
-  <title>KEMET AR | إحياء النقوش المصرية</title>
-  <link rel="stylesheet" href="css/style.css" />
-  <script src="js/app.js" defer></script>
-<link rel="icon" type="image/svg+xml" href="assets/favicon.svg"/></head>
-<body>
-  <div class="grain" aria-hidden="true"></div>
-  <header class="site-header container">
-    <a href="#top" class="brand" aria-label="KEMET AR">
-      <span class="brand-symbol" aria-hidden="true">𓂀</span>
-      <span class="brand-name"><b>KEMET<span>AR</span></b><small>THE ANCIENT WORLD, REVEALED</small></span>
-    </a>
-    <nav class="desktop-nav" aria-label="القائمة الرئيسية">
-      <a href="#explorer" data-i18n="navExplore">استكشف النقوش</a>
-      <a href="#how" data-i18n="navHow">طريقة الاستخدام</a>
-      <a href="#guide" data-i18n="navGuide">وضع المرشد</a>
-    </nav>
-    <div class="header-actions">
-      <button class="language-button" id="languageBtn" type="button" aria-label="Switch language"><span class="globe">◎</span><span id="languageLabel">EN</span></button>
-      <a class="btn btn-small btn-gold header-scan" href="ar.html?mode=custom&amp;v=dual1"><span class="icon">⌗</span><span data-i18n="tryAR">جرّب الكاميرا</span></a>
-    </div>
-  </header>
+<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"/><meta name="theme-color" content="#051018"/><title>KEMET AR — كاميرا إحياء النقوش</title>
+<link rel="stylesheet" href="css/ar.css?v=20261112-offering1"/>
+<!-- Pinned to documented official releases. Internet is required to load these libraries. -->
+<script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+<script src="js/ar.js?v=single1" defer></script><link rel="icon" type="image/svg+xml" href="assets/favicon.svg"/></head><body>
+<div id="arMount" aria-label="Live AR camera view"></div><canvas id="frozenView" hidden role="img" aria-label="المنظر الملون المثبت"></canvas><div class="ambient"></div>
+<header class="ar-header"><div class="ar-brand"><span>𓂀</span> KEMET <b>AR</b></div><span class="pill" id="modeBadge">LIVE CAMERA</span><button id="langButton" class="lang-switch">EN</button></header>
+<div class="scan-guide" id="scanGuide" aria-hidden="true"><span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span><span class="scan-center">✦</span></div>
+<div class="tracking-state" id="trackingState"><span class="pulse"></span><span id="trackingText">لم تبدأ الكاميرا بعد</span></div>
+<div id="welcome" class="welcome-wrap"><div class="welcome-panel"><div class="big-eye">𓂀</div><div class="overline">KEMET / IMAGE TRACKING</div><h1 id="welcomeTitle">اكتشف ألوان الماضي</h1><p id="welcomeDesc">ابدأ الكاميرا ووجّهها لصورة مرجعية. ستظهر طبقة رقمية فوق الهدف عند التعرف عليه.</p>
+<div class="custom-explainer" id="customExplainer" hidden><span id="chooseMindLabel" hidden></span><p id="customHelpText">للتعرف على رسوماتك، جهّز ملف targets.mind من الصور المرجعية الأربع بالترتيب.</p></div>
+<button id="startCamera" class="start-button" type="button"><span id="startLabel">تشغيل الكاميرا</span><span>⌗</span></button><small id="welcomeDisclaimer">تحتاج الكاميرا إلى HTTPS أو localhost. يرجى السماح بالوصول للكاميرا.</small></div></div>
+<div class="ar-controls" id="arControls" hidden><div class="control-top"><div class="controller-heading"><b id="sceneName">النقش المكتشف</b><small id="sceneCaption">تصور ترميم رقمي تعليمي</small></div><button class="info-toggle" id="infoToggle" type="button" aria-expanded="false">ⓘ <span id="infoLabel">الشرح</span></button></div><div class="control-bottom"><div class="opacity-row"><label for="opacitySlider" id="opacityLabel">شدة التلوين</label><input id="opacitySlider" type="range" min="15" max="100" value="100"/><b id="opacityNum">100%</b></div><button id="lockView" type="button" class="control-btn lock-view" aria-pressed="false" disabled><span id="lockIcon" aria-hidden="true">🔒</span><span id="lockLabel">تثبيت المنظر</span></button><div class="action-row"><button id="showOriginal" type="button" class="control-btn"><span>◐</span><span id="originalLabel">إظهار الأصل</span></button><button id="revealAgain" type="button" class="control-btn active"><span>✦</span><span id="revealLabel">إحياء الألوان</span></button><button id="stopCamera" type="button" class="control-btn stop"><span>■</span><span id="stopLabel">إيقاف</span></button></div></div></div>
+<div class="info-sheet" id="infoSheet" hidden><div class="info-head"><strong id="infoHeading">ملاحظات المرشد</strong><button type="button" id="infoClose" aria-label="Close">✕</button></div><p id="infoBody">التلوين معروض لأغراض الشرح فقط. تأكد من هوية النقش ومن مراجعة الألوان والنصوص مع مختص آثار.</p><button class="talk" id="speakInfo" type="button">◖)) <span id="speakLabel">استمع للشرح</span></button></div>
+<div class="error-toast" id="errorToast" hidden role="alert"></div></body></html>
 
-  <main id="top">
-    <section class="hero container">
-      <div class="hero-copy">
-        <p class="eyebrow"><span class="eyebrow-line"></span><span data-i18n="eyebrow">تجربة تفاعلية للتراث المصري</span><span class="eyebrow-number">01 / 04</span></p>
-        <h1 data-i18n-html="heroHeading">شاهد التاريخ<br /><em>يعود إلى ألوانه.</em></h1>
-        <p class="hero-sub" data-i18n="heroLead">وجّه كاميرا هاتفك إلى نقش أثري، وشاهد تصورًا رقميًا لترميم ألوانه يظهر في مكانه. تعرّف على الشخصيات والرموز واستكشف حكاية المشهد.</p>
-        <div class="hero-actions">
-          <a href="ar.html?mode=custom&amp;v=dual1" class="btn btn-gold btn-large"><span data-i18n="launchDemo">ابدأ تجربة الكاميرا</span><span class="btn-icon">↗</span></a>
-          <a href="#explorer" class="btn btn-ghost btn-large"><span data-i18n="exploreScenes">استكشف المشاهد</span><span>↓</span></a>
-        </div>
-        <div class="hero-stats">
-          <div><strong>04</strong><span data-i18n="statScenes">مشاهد أثرية للتجربة</span></div>
-          <i></i>
-          <div><strong>AR</strong><span data-i18n="statLive">تتبع بصري مباشر</span></div>
-          <i></i>
-          <div><strong>02</strong><span data-i18n="statLanguages">لغتان للشرح</span></div>
-        </div>
-      </div>
-      <div class="hero-visual">
-        <div class="visual-corner visual-corner-top"></div><div class="visual-corner visual-corner-bottom"></div>
-        <div class="visual-topline"><span class="blinker"></span><span>LIVE RECONSTRUCTION PREVIEW</span><span>FIG. 001</span></div>
-        <div class="comparison-shell" id="heroCompare">
-          <img class="compare-base" src="assets/scene-1-original.jpg" alt="رسم نقش مصري قبل التلوين" />
-          <div class="compare-after" id="heroCompareAfter"><img src="assets/scene-1-registered-preview.jpg" alt="تصور تلوين فوق الرسم نفسه" /></div>
-          <div class="compare-divider" id="heroDivider"><span class="compare-knob">‹ ›</span></div>
-          <input class="compare-range" type="range" min="0" max="100" value="58" id="heroRange" aria-label="قارن بين الرسم الأصلي والتلوين" />
-          <span class="image-stamp left-stamp" data-i18n="colored">ملوّن</span><span class="image-stamp right-stamp" data-i18n="original">أصلي</span>
-        </div>
-        <div class="visual-bottomline"><span data-i18n="dragSlider">اسحب المؤشر لمقارنة الطبقتين</span><span class="visual-wave">⌁ ⌁ ⌁</span></div>
-        <div class="floating-note"><span class="note-sun">✦</span><span data-i18n="conceptNote">تصور لوني توضيحي<br />وليس ترميمًا أثريًا موثقًا</span></div>
-      </div>
-    </section>
-
-    <section class="ticker-strip"><div class="container ticker-inner"><span>IMAGE TRACKING</span><b>◆</b><span>ANCIENT EGYPT</span><b>◆</b><span>DIGITAL RESTORATION</span><b>◆</b><span>INTERACTIVE STORYTELLING</span><b>◆</b><span>WEB AUGMENTED REALITY</span></div></section>
-
-    <section class="section explorer container" id="explorer">
-      <div class="section-head">
-        <div><p class="kicker" data-i18n="collectionLabel">المجموعة الرقمية / 01</p><h2 data-i18n="collectionHeading">النقوش تحت عدستك</h2><p class="section-sub" data-i18n="collectionLead">اختر مشهدًا، وشاهد الرسم الأصلي والتصور الملون والتلوين المتطابق معه هندسيًا.</p></div>
-        <span class="section-index">01—04</span>
-      </div>
-      <div class="explorer-layout">
-        <div class="scene-sidebar" id="sceneMenu" aria-label="اختر المشهد">
-          <button class="scene-choice active" type="button" data-scene="0" aria-pressed="true"><span class="scene-number">01</span><span class="scene-label"><strong data-i18n="scene1">المشهد الملكي</strong><small data-i18n="scene1Sub">تاج وقرابين ورموز</small></span><span class="scene-arrow">↗</span></button>
-          <button class="scene-choice" type="button" data-scene="1" aria-pressed="false"><span class="scene-number">02</span><span class="scene-label"><strong data-i18n="scene2">مشهد التقدمة</strong><small data-i18n="scene2Sub">تقدمة بين ثلاث شخصيات</small></span><span class="scene-arrow">↗</span></button>
-          <button class="scene-choice" type="button" data-scene="2" aria-pressed="false"><span class="scene-number">03</span><span class="scene-label"><strong data-i18n="scene3">سوبك والطقوس</strong><small data-i18n="scene3Sub">الإله ذو رأس التمساح</small></span><span class="scene-arrow">↗</span></button>
-          <button class="scene-choice" type="button" data-scene="3" aria-pressed="false"><span class="scene-number">04</span><span class="scene-label"><strong data-i18n="scene4">سوبك والملك</strong><small data-i18n="scene4Sub">مشهد طقسي آخر</small></span><span class="scene-arrow">↗</span></button>
-          <div class="sidebar-note"><span class="icon-info">i</span><span data-i18n="sidebarNote">الصور المرفوعة رسومات توثيقية. الاستخدام داخل المعبد يحتاج صورًا فوتوغرافية للنقوش الأصلية.</span></div>
-        </div>
-        <div class="viewer-card">
-          <div class="viewer-top"><span class="status-dot"></span><span id="viewerTitle">المشهد الملكي</span><span class="viewer-index" id="viewerIndex">01 / 04</span></div>
-          <div class="viewer-canvas" id="viewerCanvas">
-            <img id="sceneBase" src="assets/scene-1-original.jpg" alt="رسم النقش الأصلي" />
-            <img id="sceneOverlay" class="scene-overlay" src="assets/scene-1-overlay.png" alt="طبقة ألوان مسجلة على الرسم" />
-            <img id="sceneConcept" class="scene-concept hide" src="assets/scene-1-concept.jpg" alt="تصور فني ملون للمشهد" />
-            <div id="hotspotGroup" class="hotspot-group">
-              <button class="hotspot hs1" data-hotspot="0" title="تفاصيل التاج" type="button" aria-label="تفاصيل التاج">+</button>
-              <button class="hotspot hs2" data-hotspot="1" title="رمز العنخ" type="button" aria-label="رمز العنخ">+</button>
-              <button class="hotspot hs3" data-hotspot="2" title="ملابس وشخصيات" type="button" aria-label="ملابس وشخصيات">+</button>
-            </div>
-            <div class="viewer-watermark">KEMET / ARCHIVE</div>
-          </div>
-          <div class="viewer-toolbar">
-            <div class="segment" role="group" aria-label="نوع العرض"><button class="active" id="viewOverlay" type="button" data-i18n="viewOverlay">تلوين مطابق</button><button id="viewOriginal" type="button" data-i18n="viewOriginal">الرسم الأصلي</button><button id="viewConcept" type="button" data-i18n="viewConcept">تصور فني</button></div>
-            <div class="viewer-tools"><button id="animateBtn" class="tool-button" type="button" title="تلوين تدريجي"><span>✦</span><span data-i18n="animate">تحريك الألوان</span></button><button id="fullscreenBtn" class="tool-button square" type="button" title="ملء الشاشة">⛶</button></div>
-          </div>
-          <div class="viewer-bottom"><span id="sceneDescription" data-i18n="scene1Desc">رسم توثيقي قديم يظهر ثلاث شخصيات وأعمدة هيروغليفية. التلوين فوقه توضيحي فقط.</span><span class="viewer-tag" data-i18n="eduTag">EDUCATIONAL CONCEPT</span></div>
-        </div>
-      </div>
-      <div class="insight-panel" id="guide"><div class="insight-heading"><span class="eyebrow-square">✦</span><span data-i18n="guideTitle">معلومات المرشد السياحي</span><span class="insight-hint" data-i18n="clickPins">اضغط على (+) في الصورة</span></div><div class="insight-content"><div><span class="insight-kicker" id="insightKicker">DETAIL 01</span><h3 id="insightTitle">التاج والرموز الملكية</h3><p id="insightText">عناصر التاج في الرسوم المصرية تحمل دلالات دينية وملكية، لكن تحديد نوعه هنا يحتاج مراجعة الأثر الأصلي.</p></div><div class="insight-actions"><button id="speakBtn" class="btn btn-ghost"><span>◖))</span><span data-i18n="listen">استمع للشرح</span></button><button id="stopSpeakBtn" class="round-control" type="button" title="إيقاف الصوت" aria-label="إيقاف الصوت">◼</button></div></div></div>
-    </section>
-
-    <section class="how-section" id="how"><div class="container"><div class="section-head"><div><p class="kicker" data-i18n="howLabel">من المتصفح إلى المعبد / 02</p><h2 data-i18n="howHeading">ثلاث خطوات لإحياء النقش</h2><p class="section-sub" data-i18n="howLead">لا تحتاج تثبيت تطبيق. يكفي رابط HTTPS وإذن الكاميرا.</p></div></div><div class="steps-grid"><article class="step"><span class="step-n">01 <span>↗</span></span><div class="step-visual"><span class="step-icon">⌁</span><span class="tiny-symbols">𓎛 𓋹 𓂀</span></div><h3 data-i18n="how1">جهّز صورة المرجع</h3><p data-i18n="how1d">صورة واضحة للنقش الحقيقي، مع طبقة تلوين PNG بنفس أبعاده، ثم ملف targets.mind.</p></article><article class="step"><span class="step-n">02 <span>↗</span></span><div class="step-visual"><span class="step-icon">▣</span><span class="tiny-symbols">SCANNING •••</span></div><h3 data-i18n="how2">وجّه الكاميرا</h3><p data-i18n="how2d">افتح الموقع على الموبايل، وافق على الكاميرا، ووجّهها نحو الرسم المرجعي أو الجدار.</p></article><article class="step"><span class="step-n">03 <span>↗</span></span><div class="step-visual"><span class="step-icon">✧</span><span class="tiny-symbols">RESTORATION ✓</span></div><h3 data-i18n="how3">شاهد اللون والشرح</h3><p data-i18n="how3d">تظهر طبقة ملونة مثبتة على الصورة، ويمكنك إخفاؤها أو إظهارها تدريجيًا واستماع للشرح.</p></article></div></div></section>
-
-    <section class="section final-cta container"><div class="cta-glow"></div><div class="cta-inner"><p class="kicker">YOUR JOURNEY STARTS HERE</p><h2 data-i18n-html="ctaHeading">هل أنت مستعد<br /><em>لرؤية الماضي من جديد؟</em></h2><p data-i18n="ctaText">جرّب تعرّف الكاميرا على صورة MindAR جاهزة أولًا، أو جهّز ملف التعرف الخاص بنقوشك.</p><div class="cta-buttons"><a href="ar.html?mode=custom&amp;v=dual1" class="btn btn-gold btn-large"><span data-i18n="openDemo">تجربة الكاميرا الجاهزة</span><span>↗</span></a><a href="compiler.html" class="btn btn-light-outline btn-large"><span data-i18n="buildTarget">تجهيز نقش خاص</span><span>＋</span></a></div></div><div class="cta-symbol" aria-hidden="true">𓂀</div></section>
-  </main>
-  <footer class="site-footer container"><div class="footer-logo"><span>𓂀</span> KEMET <b>AR</b></div><p data-i18n="footerText">التلوين وإكمال الأجزاء المفقودة تصور رقمي تعليمي، لا إعادة إنشاء أثرية موثقة. لا تُعدّل الآثار الحقيقية.</p><span>© 2026 • DIGITAL HERITAGE LAB</span></footer>
-</body>
-</html>

@@ -1,7 +1,7 @@
 (()=>{'use strict';
 const $=s=>document.querySelector(s);
 const mode='custom';
-const reliefs=[['legacy-relief.mind','test-relief-color.png'],['royal-offering.mind','royal-offering-color.png']];
+const reliefs=[['legacy-relief.mind','test-relief-color.png'],['royal-offering.mind','royal-offering-color.png'],['offering-symbols.mind','offering-symbols.jpg']];
 let overlays=[];
 async function loadOverlayDimensions(){
  if(mode==='demo')return;
@@ -35,8 +35,10 @@ Object.assign(strings.ar,{lockLabel:'تثبيت المنظر',unlockLabel:'إل�
 Object.assign(strings.en,{lockLabel:'Lock view',unlockLabel:'Unlock view',trackingLocked:'View locked — unlock to return to the live camera',lockHint:'Find a target and show its colors first',errCapture:'Could not lock the view. Keep the target visible and try again.'});
 descriptions.ar.push(['مشهد التقدمة الملكية','تصور لوني لمشهد التقدمة الملكية.']);
 descriptions.en.push(['Royal offering relief','A color visualization of the offering scene.']);
-Object.assign(strings.ar,{customHelpText:'وجّه الكاميرا لأي من النقشين وانتقل بينهما لرؤية التلوين.',customModeLink:'مشهد التقدمة الجديد',errOverlay:'تعذر تحميل الصورة الملونة. تأكد من اتصال الإنترنت وحاول مجددًا.'});
+Object.assign(strings.ar,{customHelpText:'وجّه الكاميرا لأي نقش من النقوش الثلاثة وانتقل بينها لرؤية التلوين.',customModeLink:'مشهد التقدمة الجديد',errOverlay:'تعذر تحميل الصورة الملونة. تأكد من اتصال الإنترنت وحاول مجددًا.'});
 Object.assign(strings.en,{customHelpText:'The tracking file for the selected scene is included. Aim at the relief or the reference photo used to compile it.',customModeLink:'New offering scene',errOverlay:'Could not load the colored image. Check your connection and try again.'});
+descriptions.ar.push(['نقش القرابين','تصور ملون للرموز المنحوتة في مشهد القرابين.']);
+descriptions.en.push(['Offering symbols','A color visualization of the carved offering symbols.']);
 const tr=k=>strings[language][k];
 function syncLockControls(){
  const btn=$('#lockView');btn.disabled=!locked&&(!found||!showOverlay||!sceneEl);
@@ -90,7 +92,7 @@ async function getMindUrl(){
   if(bytes.length<=header.length||!header.every((v,i)=>bytes[i]===v))throw Error(tr('errMind'));
   return bytes.subarray(header.length);
  }));
- header[header.length-1]=0x92;
+ header[header.length-1]=0x90+entries.length;
  return URL.createObjectURL(new Blob([header,...entries],{type:'application/octet-stream'}));
 }
 function setOpacity(num){desiredOpacity=Number(num)/100;$('#opacityNum').textContent=num+'%';applyOpacity()}

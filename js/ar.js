@@ -2,16 +2,15 @@
 const $=s=>document.querySelector(s);
 const params=new URLSearchParams(location.search);
 const mode=params.get('mode')==='demo'?'demo':'custom';
-const legacy=params.get('scene')==='legacy';
-const customTarget=legacy?'assets/legacy-relief.mind':'assets/royal-offering.mind';
-const customOverlay=legacy?'test-relief-color.png':'royal-offering-color.png';
-let overlayHeight=3/4;
+const reliefs=[['legacy-relief.mind','test-relief-color.png'],['royal-offering.mind','royal-offering-color.png']];
+let overlays=[];
 async function loadOverlayDimensions(){
  if(mode==='demo')return;
- const img=new Image();
- await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(Error(tr('errOverlay')));img.src='assets/'+customOverlay;});
- if(!img.naturalWidth||!img.naturalHeight)throw Error(tr('errOverlay'));
- overlayHeight=img.naturalHeight/img.naturalWidth;
+ overlays=await Promise.all(reliefs.map(async ([,name])=>{
+  const img=new Image();
+  await new Promise((ok,fail)=>{img.onload=ok;img.onerror=()=>fail(Error(tr('errOverlay')));img.src='assets/'+name;});
+  return [img.naturalHeight/img.naturalWidth,name];
+ }));
 }
 let language=localStorage.getItem('kemet-lang')==='en'?'en':'ar';
 let locked=false,lockedIndex=-1;
@@ -35,11 +34,9 @@ Object.assign(strings.ar,{customHelpText:'ملف التعرف جاهز. اعرض
 Object.assign(strings.en,{customHelpText:'Tracking is ready. Display the original photo on another screen or print it, then aim your phone camera at it.',customModeLink:'Your photo test',chooseMindLabel:'Tracking file included — optional replacement',compilerLink:'Build another target ↗'});
 Object.assign(strings.ar,{lockLabel:'تثبيت المنظر',unlockLabel:'إلغاء التثبيت',trackingLocked:'المنظر مثبت — اضغط إلغاء التثبيت للعودة للكاميرا',lockHint:'وجّه الكاميرا للنقش وأظهر الألوان أولًا',errCapture:'تعذر تثبيت المنظر. أبقِ النقش ظاهرًا وحاول مجددًا.'});
 Object.assign(strings.en,{lockLabel:'Lock view',unlockLabel:'Unlock view',trackingLocked:'View locked — unlock to return to the live camera',lockHint:'Find a target and show its colors first',errCapture:'Could not lock the view. Keep the target visible and try again.'});
-if(!legacy){
- descriptions.ar=[['مشهد التقدمة الملكية','تصور لوني للمشهد الجديد. الألوان توضيحية وليست توثيقًا للأصباغ الأصلية.']];
- descriptions.en=[['Royal offering relief','A color visualization of the new relief. Colors are illustrative.']];
-}
-Object.assign(strings.ar,{customHelpText:'ملف التعرف مرفق للمشهد المختار. وجّه الكاميرا للنقش أو للصورة المرجعية التي أُنشئ منها الملف.',customModeLink:'مشهد التقدمة الجديد',errOverlay:'تعذر تحميل الصورة الملونة. تأكد من اتصال الإنترنت وحاول مجددًا.'});
+descriptions.ar.push(['مشهد التقدمة الملكية','تصور لوني لمشهد التقدمة الملكية.']);
+descriptions.en.push(['Royal offering relief','A color visualization of the offering scene.']);
+Object.assign(strings.ar,{customHelpText:'وجّه الكاميرا لأي من النقشين وانتقل بينهما لرؤية التلوين.',customModeLink:'مشهد التقدمة الجديد',errOverlay:'تعذر تحميل الصورة الملونة. تأكد من اتصال الإنترنت وحاول مجددًا.'});
 Object.assign(strings.en,{customHelpText:'The tracking file for the selected scene is included. Aim at the relief or the reference photo used to compile it.',customModeLink:'New offering scene',errOverlay:'Could not load the colored image. Check your connection and try again.'});
 const tr=k=>strings[language][k];
 function syncLockControls(){
@@ -79,18 +76,31 @@ function toggleLock(){
  }catch(e){console.error(e);canvas.hidden=true;canvas.width=canvas.height=0;error(tr('errCapture'));}
 }
 
-function renderLang(){document.documentElement.lang=language;document.documentElement.dir=language==='ar'?'rtl':'ltr';localStorage.setItem('kemet-lang',language);$('#langButton').textContent=language==='ar'?'EN':'عربي';['welcomeTitle','welcomeDesc','demoHelpTitle','demoHelpText','demoTargetLink','chooseMindLabel','customHelpText','compilerLink','startLabel','backHome','demoModeLink','customModeLink','welcomeDisclaimer','infoLabel','opacityLabel','revealLabel','stopLabel','infoHeading','speakLabel'].forEach(id=>$('#'+id).textContent=tr(id));$('#modeBadge').textContent=mode==='demo'?'MINDAR DEMO':(legacy?'LEGACY RELIEF':'ROYAL OFFERING');$('#demoExplainer').hidden=mode==='custom';$('#customExplainer').hidden=mode!=='custom';$('#sceneCaption').textContent=tr('sceneCaption');$('#originalLabel').textContent=showOverlay?tr('originalLabel'):tr('restoreLabel');$('#trackingText').textContent=found?tr('trackingFound'):sceneEl?tr('trackingScan'):tr('trackingIdle');updateInfo();syncLockControls();if(locked)status('trackingLocked',true)}
+function renderLang(){document.documentElement.lang=language;document.documentElement.dir=language==='ar'?'rtl':'ltr';localStorage.setItem('kemet-lang',language);$('#langButton').textContent=language==='ar'?'EN':'عربي';['welcomeTitle','welcomeDesc','demoHelpTitle','demoHelpText','demoTargetLink','chooseMindLabel','customHelpText','compilerLink','startLabel','backHome','demoModeLink','customModeLink','welcomeDisclaimer','infoLabel','opacityLabel','revealLabel','stopLabel','infoHeading','speakLabel'].forEach(id=>$('#'+id).textContent=tr(id));$('#modeBadge').textContent=mode==='demo'?'MINDAR DEMO':'KEMET AR';$('#demoExplainer').hidden=mode==='custom';$('#customExplainer').hidden=mode!=='custom';$('#sceneCaption').textContent=tr('sceneCaption');$('#originalLabel').textContent=showOverlay?tr('originalLabel'):tr('restoreLabel');$('#trackingText').textContent=found?tr('trackingFound'):sceneEl?tr('trackingScan'):tr('trackingIdle');updateInfo();syncLockControls();if(locked)status('trackingLocked',true)}
 function updateInfo(){const d=mode==='demo'?[tr('demoScene'),tr('infoBody')]:descriptions[language][Math.max(0,locked?lockedIndex:currentIndex)];$('#sceneName').textContent=d[0];$('#infoBody').textContent=d[1]}
 function status(key,success=false){syncLockControls();if(locked){key='trackingLocked';success=true;}$('#trackingText').textContent=tr(key);$('#trackingState').classList.toggle('success',success)}
 let errorTimer=0;function error(message){const box=$('#errorToast');box.textContent=message;box.hidden=false;clearTimeout(errorTimer);errorTimer=setTimeout(()=>box.hidden=true,9000)}
-async function getMindUrl(){if(mode==='demo')return DEMO_MIND;const file=$('#mindFile').files[0];if(file)return URL.createObjectURL(file);try{const res=await fetch(customTarget,{method:'GET',cache:'no-store'});if(res.ok&&Number(res.headers.get('content-length')||'100')>50)return new URL(customTarget,location.href).href;}catch(e){}throw new Error(tr('errMind'))}
+async function getMindUrl(){
+ if(mode==='demo')return DEMO_MIND;
+ // MindAR v2 MessagePack envelope: {v:2,dataList:[target]}.
+ const header=Uint8Array.of(0x82,0xa1,118,2,0xa8,100,97,116,97,76,105,115,116,0x91);
+ const entries=await Promise.all(reliefs.map(async ([name])=>{
+  const response=await fetch('assets/'+name);
+  if(!response.ok)throw Error(tr('errMind'));
+  const bytes=new Uint8Array(await response.arrayBuffer());
+  if(bytes.length<=header.length||!header.every((v,i)=>bytes[i]===v))throw Error(tr('errMind'));
+  return bytes.subarray(header.length);
+ }));
+ header[header.length-1]=0x92;
+ return URL.createObjectURL(new Blob([header,...entries],{type:'application/octet-stream'}));
+}
 function setOpacity(num){desiredOpacity=Number(num)/100;$('#opacityNum').textContent=num+'%';applyOpacity()}
 function applyOpacity(){if(!sceneEl||!found)return;const item=$('#plane-'+currentIndex);if(item)item.setAttribute('material','opacity',showOverlay?desiredOpacity:0)}
 function animateOverlay(){if(!found||!sceneEl)return;cancelAnimationFrame(animationFrame);showOverlay=true;syncLockControls();$('#originalLabel').textContent=tr('originalLabel');$('#showOriginal').classList.remove('active');const plane=$('#plane-'+currentIndex);if(!plane)return;const begin=performance.now(),dur=1800;function tick(now){if(!found)return;let ratio=Math.min(1,(now-begin)/dur);ratio=ratio*ratio*(3-2*ratio);plane.setAttribute('material','opacity',ratio*desiredOpacity);if(ratio<1)animationFrame=requestAnimationFrame(tick)}animationFrame=requestAnimationFrame(tick)}
-function startScene(targetSrc){const demo=mode==='demo',meta=demo?[[.552,'demo-overlay.png']]:[[overlayHeight,customOverlay]];const assets=meta.map((x,i)=>`<img id="texture-${i}" src="assets/${x[1]}" crossorigin="anonymous">`).join('');const targets=meta.map((x,i)=>`<a-entity id="target-${i}" mindar-image-target="targetIndex: ${i}"><a-plane id="plane-${i}" src="#texture-${i}" position="0 0 0.004" width="1" height="${x[0]}" material="shader: flat; transparent: true; opacity: 0; depthWrite: false; side: double; alphaTest: 0.001"></a-plane></a-entity>`).join('');const safeSrc=targetSrc.replaceAll('"','&quot;');$('#arMount').innerHTML=`<a-scene id="scene" mindar-image="imageTargetSrc: ${safeSrc}; autoStart: false; uiLoading: no; uiScanning: no; uiError: no; filterMinCF: 0.0001; filterBeta: 0.01;" embedded color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false"><a-assets timeout="25000">${assets}</a-assets><a-camera position="0 0 0" look-controls="enabled: false"></a-camera>${targets}</a-scene>`;sceneEl=$('#scene');meta.forEach((_,i)=>{const target=$('#target-'+i);target.addEventListener('targetFound',()=>{currentIndex=i;found=true;status('trackingFound',true);$('#scanGuide').classList.remove('active');$('#infoSheet').hidden=true;updateInfo();animateOverlay()});target.addEventListener('targetLost',()=>{if(currentIndex!==i)return;cancelAnimationFrame(animationFrame);found=false;currentIndex=-1;status('trackingLost');$('#scanGuide').classList.toggle('active',!locked);updateInfo()})});sceneEl.addEventListener('arError',e=>{console.error(e);error(tr('errCamera'))});return sceneEl}
+function startScene(targetSrc){const demo=mode==='demo',meta=demo?[[.552,'demo-overlay.png']]:overlays;const assets=meta.map((x,i)=>`<img id="texture-${i}" src="assets/${x[1]}" crossorigin="anonymous">`).join('');const targets=meta.map((x,i)=>`<a-entity id="target-${i}" mindar-image-target="targetIndex: ${i}"><a-plane id="plane-${i}" src="#texture-${i}" position="0 0 0.004" width="1" height="${x[0]}" material="shader: flat; transparent: true; opacity: 0; depthWrite: false; side: double; alphaTest: 0.001"></a-plane></a-entity>`).join('');const safeSrc=targetSrc.replaceAll('"','&quot;');$('#arMount').innerHTML=`<a-scene id="scene" mindar-image="imageTargetSrc: ${safeSrc}; autoStart: false; uiLoading: no; uiScanning: no; uiError: no; filterMinCF: 0.0001; filterBeta: 0.01;" embedded color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false"><a-assets timeout="25000">${assets}</a-assets><a-camera position="0 0 0" look-controls="enabled: false"></a-camera>${targets}</a-scene>`;sceneEl=$('#scene');meta.forEach((_,i)=>{const target=$('#target-'+i);target.addEventListener('targetFound',()=>{currentIndex=i;found=true;status('trackingFound',true);$('#scanGuide').classList.remove('active');$('#infoSheet').hidden=true;updateInfo();animateOverlay()});target.addEventListener('targetLost',()=>{if(currentIndex!==i)return;cancelAnimationFrame(animationFrame);found=false;currentIndex=-1;status('trackingLost');$('#scanGuide').classList.toggle('active',!locked);updateInfo()})});sceneEl.addEventListener('arError',e=>{console.error(e);error(tr('errCamera'))});return sceneEl}
 function sceneLoaded(scene){if(scene.hasLoaded)return Promise.resolve();return Promise.race([new Promise(res=>scene.addEventListener('loaded',res,{once:true})),new Promise((_,rej)=>setTimeout(()=>rej(Error('Scene load timeout')),30000))])}
-async function start(){const btn=$('#startCamera');btn.disabled=true;status('trackingLoading');try{if(!window.isSecureContext&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1')throw Error(tr('errSecure'));if(!window.AFRAME||!AFRAME.components['mindar-image'])throw Error(tr('errLib'));mindUrl=await getMindUrl();await loadOverlayDimensions();const scene=startScene(mindUrl);await sceneLoaded(scene);if(!scene.systems['mindar-image-system'])throw Error(tr('errLib'));await scene.systems['mindar-image-system'].start();$('#welcome').hidden=true;$('#arControls').hidden=false;$('#scanGuide').classList.add('active');$('.ambient').classList.add('hidden');status('trackingScan');}catch(e){console.error(e);error(e.message||tr('errCamera'));btn.disabled=false;status('trackingIdle');if(sceneEl){try{await sceneEl.systems['mindar-image-system']?.stop()}catch(err){}$('#arMount').innerHTML='';sceneEl=null}}}
-async function stop(){unlockView();cancelAnimationFrame(animationFrame);if('speechSynthesis' in window)speechSynthesis.cancel();try{await sceneEl?.systems['mindar-image-system']?.stop()}catch(e){console.error(e)}$('#arMount').innerHTML='';sceneEl=null;found=false;currentIndex=-1;$('#welcome').hidden=false;$('#startCamera').disabled=false;$('#arControls').hidden=true;$('#infoSheet').hidden=true;$('#scanGuide').classList.remove('active');$('.ambient').classList.remove('hidden');status('trackingIdle')}
+async function start(){const btn=$('#startCamera');btn.disabled=true;status('trackingLoading');try{if(!window.isSecureContext&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1')throw Error(tr('errSecure'));if(!window.AFRAME||!AFRAME.components['mindar-image'])throw Error(tr('errLib'));mindUrl=await getMindUrl();await loadOverlayDimensions();const scene=startScene(mindUrl);await sceneLoaded(scene);if(!scene.systems['mindar-image-system'])throw Error(tr('errLib'));await scene.systems['mindar-image-system'].start();$('#welcome').hidden=true;$('#arControls').hidden=false;$('#scanGuide').classList.add('active');$('.ambient').classList.add('hidden');status('trackingScan');}catch(e){console.error(e);error(e.message||tr('errCamera'));btn.disabled=false;status('trackingIdle');if(sceneEl){try{await sceneEl.systems['mindar-image-system']?.stop()}catch(err){}if(mindUrl?.startsWith('blob:'))URL.revokeObjectURL(mindUrl);mindUrl=null;$('#arMount').innerHTML='';sceneEl=null}}}
+async function stop(){unlockView();cancelAnimationFrame(animationFrame);if('speechSynthesis' in window)speechSynthesis.cancel();try{await sceneEl?.systems['mindar-image-system']?.stop()}catch(e){console.error(e)}if(mindUrl?.startsWith('blob:'))URL.revokeObjectURL(mindUrl);mindUrl=null;$('#arMount').innerHTML='';sceneEl=null;found=false;currentIndex=-1;$('#welcome').hidden=false;$('#startCamera').disabled=false;$('#arControls').hidden=true;$('#infoSheet').hidden=true;$('#scanGuide').classList.remove('active');$('.ambient').classList.remove('hidden');status('trackingIdle')}
 $('#lockView').addEventListener('click',toggleLock);
 $('#startCamera').addEventListener('click',start);
 $('#stopCamera').addEventListener('click',stop);
